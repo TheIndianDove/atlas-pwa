@@ -1,116 +1,89 @@
-// sw.js – Offline-first Atlas shell
+// Atlas – "offline-only" service worker
+// Once installed and cached, the app never relies on the network
+// for its own files (HTML/CSS/JS/images).
 
-const CACHE_NAME = 'atlas-v7'; // bump when you change caching logic
+const CACHE_NAME = 'atlas-offline-v1';
 
-// All static app shell assets we want available when fully offline
-const APP_SHELL = [
-  './',
+// Everything the app needs to run offline.
+// Adjust this list if you add/remove files.
+const ASSETS = [
   './programs.html',
   './schedule.html',
   './log.html',
-  './history.html',
   './tracker.html',
+  './history.html',
   './profile.html',
   './settings.html',
-  './css/style.css',
+
+  './style.css',
   './functions.js',
+
   './manifest.webmanifest',
   './icons/atlas-logo.png',
   './icons/icons.svg'
 ];
 
-// Detect localhost/127.0.0.1 (keep dev fresh)
-const DEV = ['localhost', '127.0.0.1'].includes(
-  new URL(self.registration.scope).hostname
-);
-
-self.addEventListener('install', (event) => {
-  if (!DEV) {
-    event.waitUntil(
-      caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL))
-    );
-  }
-  self.skipWaiting();
-});
-
-self.addEventListener('activate', (event) => {
+// Install: cache all core assets once
+self.addEventListener('install', event => {
   event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
-      )
-      .then(() => self.clients.claim())
+    caches.open(CACHE_NAME)
+      .then(cache => cache.addAll(ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener('fetch', (event) => {
+// Activate: clean old caches and take control
+self.addEventListener('activate', event => {
+  event.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(
+        keys
+          .filter(key => key !== CACHE_NAME)
+          .map(key => caches.delete(key))
+      )
+    ).then(() => self.clients.claim())
+  );
+});
+
+// Fetch: offline-only for same-origin requests
+self.addEventListener('fetch', event => {
   const req = event.request;
+
+  // Only handle GETs from our own origin
   if (req.method !== 'GET') return;
-
   const url = new URL(req.url);
-  const isHTML =
+  if (url.origin !== self.location.origin) return;
+
+  // Navigation requests (opening the app, changing pages, etc.)
+  const isNavigation =
     req.mode === 'navigate' ||
-    req.headers.get('accept')?.includes('text/html');
-  const isCSSJS = /\.(css|js|mjs)$/i.test(url.pathname);
+    (req.headers.get('accept') || '').includes('text/html');
 
-  // --- Development: always go to network for HTML/CSS/JS
-  if (DEV && (isHTML || isCSSJS)) {
-    event.respondWith(fetch(req, { cache: 'no-store' }));
-    return;
-  }
-
-  // --- HTML: cache-first, then network, then fallback
-  if (isHTML) {
+  if (isNavigation) {
+    // Always serve the main shell from cache
     event.respondWith(
-      caches.match(req).then((cached) => {
-        if (cached) return cached;
-
-        return fetch(req)
-          .then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-            return res;
-          })
-          .catch(() =>
-            // last resort: show programs page
-            caches.match('./programs.html')
-          );
+      caches.match('./programs.html').then(cached => {
+        // Fallback to any cached response for this request if needed
+        return cached || caches.match(req) || new Response(
+          'Offline shell not found in cache.',
+          { status: 503, statusText: 'Offline' }
+        );
       })
     );
     return;
   }
 
-  // --- CSS / JS: try cache, then network (and cache)
-  if (isCSSJS) {
-    event.respondWith(
-      caches.match(req).then((cached) => {
-        const fetchAndCache = fetch(req)
-          .then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-            return res;
-          })
-          .catch(() => cached);
-
-        return cached || fetchAndCache;
-      })
-    );
-    return;
-  }
-
-  // --- Other GETs: network-first with cache fallback
+  // Static assets (CSS, JS, images) – cache only, no network
   event.respondWith(
-    fetch(req)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy));
-        return res;
-      })
-      .catch(() => caches.match(req))
+    caches.match(req).then(cached => {
+      if (cached) return cached;
+
+      // If we don't have it cached, we *do not* try the network,
+      // so the app will not break if the server is gone.
+      return new Response('Resource not available offline.', {
+        status: 404,
+        statusText: 'Not cached'
+      });
+    })
   );
 });
