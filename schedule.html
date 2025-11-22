@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Schedule – Atlas</title>
+  <meta name="theme-color" content="#2b8cff" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="functions.js" defer></script>
+</head>
+
+<body>
+  <header class="app-header">
+    <a href="programs.html" class="brand">
+      <img src="icons/atlas-logo.png" alt="Atlas" width="32" height="32" />
+      <span class="brand-title">ATLAS</span>
+    </a>
+    <a href="settings.html" class="icon-btn" aria-label="Settings" data-page-link="settings">
+      <svg class="icon">
+        <use href="icons/icons.svg#settings" />
+      </svg>
+    </a>
+  </header>
+
+  <main class="main-container page-narrow" id="scheduleRoot">
+    <h1>Your Weekly Schedule</h1>
+    <p class="subtle" id="programInfo">Program: —</p>
+    <p class="subtle" id="restCounter">Rest Days Used: 0 / 0</p>
+
+    <div class="card schedule-controls-row">
+      <button id="editProgramBtn" class="btn secondary">Edit Rest & Order</button>
+      <button id="resetDefaultBtn" class="btn ghost">Reset to default</button>
+      <button id="resetProgressBtn" class="btn ghost">Reset progress</button>
+    </div>
+
+    <div id="modeBadge" class="card hidden my-06">Edit mode: <strong>double-tap</strong> Rest/Workout •
+      <strong>long-press</strong> to drag.</div>
+
+    <section id="weekContainer" class="mt-06" aria-live="polite"></section>
+
+    <!-- Day card template -->
+    <template id="day-card-template">
+      <article class="day-card" data-day draggable="false">
+        <div class="drag-grab" aria-label="Drag to reorder"><svg class="icon">
+            <use href="icons/icons.svg#drag" />
+          </svg></div>
+        <div>
+          <div class="day-name">Mon</div>
+          <div class="slot-label">Push</div>
+          <div class="type-text">Tap to toggle complete</div>
+          <div class="complete-text"></div>
+        </div>
+        <div class="drag-hint"><span class="badge badge-rest">Rest</span> <span class="badge badge-complete">✓</span>
+        </div>
+      </article>
+    </template>
+  </main>
+
+  <footer class="app-footer">
+    <nav class="tabbar" aria-label="Primary">
+      <a href="programs.html" class="tab" data-page-link="programs"><svg class="icon">
+          <use href="icons/icons.svg#programs" />
+        </svg><span>Program</span></a>
+      <a href="schedule.html" class="tab" data-page-link="schedule"><svg class="icon">
+          <use href="icons/icons.svg#schedule" />
+        </svg><span>Schedule</span></a>
+      <a href="log.html" class="tab" data-page-link="log"><svg class="icon">
+          <use href="icons/icons.svg#log" />
+        </svg><span>Log</span></a>
+      <a href="history.html" class="tab" data-page-link="history"><svg class="icon">
+          <use href="icons/icons.svg#history" />
+        </svg><span>History</span></a>
+      <a href="tracker.html" class="tab" data-page-link="tracker"><svg class="icon">
+          <use href="icons/icons.svg#tracker" />
+        </svg><span>Tracker</span></a>
+      <a href="profile.html" class="tab" data-page-link="profile"><svg class="icon">
+          <use href="icons/icons.svg#profile" />
+        </svg><span>Profile</span></a>
+    </nav>
+  </footer>
+</body>
+
+</html>
